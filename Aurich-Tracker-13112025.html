@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moin Aurich Follower Tracker</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #2E7BAC 0%, #003D5C 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #003D5C;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2em;
+        }
+        .channel-link {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .channel-link a {
+            color: #2E7BAC;
+            text-decoration: none;
+            font-size: 0.9em;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #2E7BAC 0%, #003D5C 100%);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .stat-label {
+            font-size: 0.9em;
+            opacity: 0.9;
+        }
+        .input-section {
+            background: #f7f7f7;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+        }
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        input[type="date"], input[type="number"] {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 1em;
+        }
+        button {
+            padding: 12px 24px;
+            background: #FDB750;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #FCA520;
+        }
+        .secondary-btn {
+            background: #2E7BAC;
+            color: white;
+        }
+        .secondary-btn:hover {
+            background: #256492;
+        }
+        .danger-btn {
+            background: #555;
+            color: white;
+        }
+        .danger-btn:hover {
+            background: #333;
+        }
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 100%;
+            transition: all 0.3s ease;
+        }
+        .chart-wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            transition: max-width 0.3s ease;
+        }
+        .chart-wrapper canvas {
+            width: 100% !important;
+            height: auto !important;
+            display: block;
+            aspect-ratio: 1 / 1;
+        }
+        .data-table {
+            overflow-x: auto;
+            margin-bottom: 20px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        th {
+            background: #003D5C;
+            color: white;
+            padding: 15px;
+            text-align: left;
+        }
+        td {
+            padding: 12px 15px;
+            border-bottom: 1px solid #eee;
+        }
+        tr:hover {
+            background: #f7f7f7;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        #fileInput {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📊 Moin Aurich bei Whatsapp</h1>
+        <div class="channel-link">
+            <a href="https://whatsapp.com/channel/0029Vb6Z26X1HspwMwPXMY40" target="_blank">
+                🔗 Zum WhatsApp Channel
+            </a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-label">Aktuelle Follower</div>
+                <div class="stat-value" id="currentFollowers">25</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Zuwachs (letzte Messung)</div>
+                <div class="stat-value" id="lastGrowth">+15</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">Durchschn. Wachstum/Tag</div>
+                <div class="stat-value" id="avgGrowth">+0.8</div>
+            </div>
+        </div>
+
+        <div class="input-section">
+            <h3 style="margin-bottom: 15px;">➕ Neue Messung hinzufügen</h3>
+            <div class="input-group">
+                <input type="date" id="dateInput" value="">
+                <input type="number" id="followersInput" placeholder="Anzahl Follower" min="0">
+                <button onclick="addEntry()">Hinzufügen</button>
+            </div>
+            <div style="margin-top: 15px;">
+                <label for="chartSize" style="display: block; margin-bottom: 10px;"><strong>Chart-Größe:</strong></label>
+                <input type="range" id="chartSize" min="400" max="3000" value="800" step="100" 
+                       style="width: 100%; max-width: 400px;" 
+                       oninput="resizeChart(this.value)">
+                <span id="sizeDisplay" style="margin-left: 10px;">800px</span>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-wrapper" id="chartWrapper">
+                <canvas id="followerChart"></canvas>
+            </div>
+        </div>
+
+        <div class="data-table">
+            <h3 style="margin-bottom: 15px;">📋 Alle Messungen</h3>
+            <table id="dataTable">
+                <thead>
+                    <tr>
+                        <th>Datum</th>
+                        <th>Follower</th>
+                        <th>Zuwachs</th>
+                        <th>Aktion</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody">
+                </tbody>
+            </table>
+        </div>
+
+        <div class="button-group">
+            <button class="secondary-btn" onclick="exportToExcel()">📥 Als Excel exportieren</button>
+            <button class="secondary-btn" onclick="exportData()">💾 Daten exportieren (JSON)</button>
+            <button class="secondary-btn" onclick="document.getElementById('fileInput').click()">📂 Daten importieren</button>
+        </div>
+        <input type="file" id="fileInput" accept=".json" onchange="importData(event)">
+    </div>
+
+    <script>
+        let data = [];
+        let chart = null;
+
+        function loadData() {
+            try {
+                const savedData = localStorage.getItem('moin-aurich-follower-data');
+                if (savedData) {
+                    data = JSON.parse(savedData);
+                } else {
+                    // Vollständige Daten vom 01.10. bis 12.11.2025
+                    data = [
+                        { date: '2025-10-01', followers: 10 },
+                        { date: '2025-10-20', followers: 25 },
+                        { date: '2025-10-21', followers: 26 },
+                        { date: '2025-10-24', followers: 27 },
+                        { date: '2025-10-25', followers: 27 },
+                        { date: '2025-10-26', followers: 27 },
+                        { date: '2025-10-27', followers: 29 },
+                        { date: '2025-10-28', followers: 29 },
+                        { date: '2025-10-29', followers: 29 },
+                        { date: '2025-10-30', followers: 29 },
+                        { date: '2025-10-31', followers: 29 },
+                        { date: '2025-11-01', followers: 30 },
+                        { date: '2025-11-02', followers: 30 },
+                        { date: '2025-11-03', followers: 32 },
+                        { date: '2025-11-04', followers: 32 },
+                        { date: '2025-11-05', followers: 32 },
+                        { date: '2025-11-07', followers: 32 },
+                        { date: '2025-11-08', followers: 32 },
+                        { date: '2025-11-09', followers: 32 },
+                        { date: '2025-11-10', followers: 32 },
+                        { date: '2025-11-11', followers: 32 },
+                        { date: '2025-11-12', followers: 32 }
+                    ];
+                    saveData();
+                }
+            } catch (error) {
+                console.error('Fehler beim Laden:', error);
+                data = [
+                    { date: '2025-10-01', followers: 10 },
+                    { date: '2025-10-20', followers: 25 },
+                    { date: '2025-10-21', followers: 26 },
+                    { date: '2025-10-24', followers: 27 },
+                    { date: '2025-10-25', followers: 27 },
+                    { date: '2025-10-26', followers: 27 },
+                    { date: '2025-10-27', followers: 29 },
+                    { date: '2025-10-28', followers: 29 },
+                    { date: '2025-10-29', followers: 29 },
+                    { date: '2025-10-30', followers: 29 },
+                    { date: '2025-10-31', followers: 29 },
+                    { date: '2025-11-01', followers: 30 },
+                    { date: '2025-11-02', followers: 30 },
+                    { date: '2025-11-03', followers: 32 },
+                    { date: '2025-11-04', followers: 32 },
+                    { date: '2025-11-05', followers: 32 },
+                    { date: '2025-11-07', followers: 32 },
+                    { date: '2025-11-08', followers: 32 },
+                    { date: '2025-11-09', followers: 32 },
+                    { date: '2025-11-10', followers: 32 },
+                    { date: '2025-11-11', followers: 32 },
+                    { date: '2025-11-12', followers: 32 }
+                ];
+            }
+        }
+
+        function saveData() {
+            try {
+                localStorage.setItem('moin-aurich-follower-data', JSON.stringify(data));
+            } catch (error) {
+                console.error('Fehler beim Speichern:', error);
+                alert('Fehler beim Speichern der Daten. Bitte nutze die Export-Funktion als Backup.');
+            }
+        }
+
+        function getAllDatesBetween(startDate, endDate) {
+            const dates = [];
+            const current = new Date(startDate + 'T12:00:00');
+            const end = new Date(endDate + 'T12:00:00');
+            
+            while (current <= end) {
+                const year = current.getFullYear();
+                const month = String(current.getMonth() + 1).padStart(2, '0');
+                const day = String(current.getDate()).padStart(2, '0');
+                const dateStr = `${year}-${month}-${day}`;
+                dates.push(dateStr);
+                current.setDate(current.getDate() + 1);
+            }
+            return dates;
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('followerChart').getContext('2d');
+            
+            if (chart) {
+                chart.destroy();
+            }
+
+            if (data.length === 0) {
+                return;
+            }
+
+            const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const startDate = sorted[0].date;
+            const endDate = sorted[sorted.length - 1].date;
+            
+            const allDates = getAllDatesBetween(startDate, endDate);
+            
+            const dataMap = {};
+            sorted.forEach(entry => {
+                dataMap[entry.date] = entry.followers;
+            });
+            
+            const labels = allDates.map(date => formatDate(date));
+            const values = allDates.map(date => dataMap[date] !== undefined ? dataMap[date] : null);
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Follower',
+                        data: values,
+                        borderColor: '#FDB750',
+                        backgroundColor: 'rgba(253, 183, 80, 0.1)',
+                        borderWidth: 3,
+                        fill: true,
+                        tension: 0.4,
+                        spanGaps: true,
+                        pointRadius: function(context) {
+                            const index = context.dataIndex;
+                            return values[index] !== null ? 2 : 0;
+                        },
+                        pointHoverRadius: 4,
+                        pointBackgroundColor: '#FDB750',
+                        pointBorderColor: '#003D5C',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 1,
+                    plugins: {
+                        legend: {
+                            display: true,
+                            position: 'top',
+                        },
+                        title: {
+                            display: true,
+                            text: 'Follower-Entwicklung',
+                            font: {
+                                size: 18
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                title: function(context) {
+                                    return context[0].label;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: {
+                                maxRotation: 45,
+                                minRotation: 45,
+                                autoSkip: true,
+                                maxTicksLimit: 15
+                            },
+                            title: {
+                                display: true,
+                                text: 'Datum'
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 10
+                            },
+                            title: {
+                                display: true,
+                                text: 'Follower'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function formatDate(dateString) {
+            const date = new Date(dateString + 'T00:00:00');
+            return date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            const sorted = [...data].sort((a, b) => new Date(b.date) - new Date(a.date));
+
+            sorted.forEach((entry, index) => {
+                const row = tbody.insertRow();
+                const growth = index < sorted.length - 1 ? 
+                    entry.followers - sorted[index + 1].followers : 
+                    (index === 0 && sorted.length > 1 ? entry.followers - sorted[1].followers : 0);
+
+                row.innerHTML = `
+                    <td>${formatDate(entry.date)}</td>
+                    <td>${entry.followers}</td>
+                    <td style="color: ${growth >= 0 ? '#2E7BAC' : '#e74c3c'}">
+                        ${growth > 0 ? '+' : ''}${growth}
+                    </td>
+                    <td>
+                        <button class="danger-btn" style="padding: 5px 10px; font-size: 0.9em;" 
+                                onclick="deleteEntry('${entry.date}')">Löschen</button>
+                    </td>
+                `;
+            });
+        }
+
+        function updateStats() {
+            const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const current = sorted[sorted.length - 1]?.followers || 0;
+            const previous = sorted[sorted.length - 2]?.followers || 0;
+            const lastGrowth = current - previous;
+
+            let totalGrowth = 0;
+            let growthDays = 0;
+            for (let i = 1; i < sorted.length; i++) {
+                const daysDiff = (new Date(sorted[i].date) - new Date(sorted[i-1].date)) / (1000 * 60 * 60 * 24);
+                const growth = sorted[i].followers - sorted[i-1].followers;
+                totalGrowth += growth;
+                growthDays += daysDiff;
+            }
+            const avgGrowth = growthDays > 0 ? (totalGrowth / growthDays).toFixed(1) : 0;
+
+            document.getElementById('currentFollowers').textContent = current;
+            document.getElementById('lastGrowth').textContent = (lastGrowth >= 0 ? '+' : '') + lastGrowth;
+            document.getElementById('avgGrowth').textContent = '+' + avgGrowth;
+        }
+
+        function addEntry() {
+            const dateInput = document.getElementById('dateInput');
+            const followersInput = document.getElementById('followersInput');
+
+            if (!dateInput.value || !followersInput.value) {
+                alert('Bitte Datum und Follower-Anzahl eingeben!');
+                return;
+            }
+
+            const existingIndex = data.findIndex(d => d.date === dateInput.value);
+            if (existingIndex !== -1) {
+                if (confirm('Ein Eintrag für dieses Datum existiert bereits. Überschreiben?')) {
+                    data[existingIndex].followers = parseInt(followersInput.value);
+                }
+            } else {
+                data.push({
+                    date: dateInput.value,
+                    followers: parseInt(followersInput.value)
+                });
+            }
+
+            followersInput.value = '';
+            updateAll();
+        }
+
+        function deleteEntry(date) {
+            if (confirm('Eintrag wirklich löschen?')) {
+                data = data.filter(d => d.date !== date);
+                updateAll();
+            }
+        }
+
+        function updateAll() {
+            initChart();
+            updateTable();
+            updateStats();
+            saveData();
+        }
+
+        function resizeChart(size) {
+            const wrapper = document.getElementById('chartWrapper');
+            wrapper.style.maxWidth = size + 'px';
+            document.getElementById('sizeDisplay').textContent = size + 'px';
+        }
+
+        function exportToExcel() {
+            const sorted = [...data].sort((a, b) => new Date(a.date) - new Date(b.date));
+            const excelData = sorted.map((entry, index) => {
+                const growth = index > 0 ? entry.followers - sorted[index - 1].followers : 0;
+                return {
+                    'Datum': formatDate(entry.date),
+                    'Follower': entry.followers,
+                    'Zuwachs': growth
+                };
+            });
+
+            const ws = XLSX.utils.json_to_sheet(excelData);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Follower Tracking');
+            XLSX.writeFile(wb, `Moin_Aurich_Follower_${new Date().toISOString().split('T')[0]}.xlsx`);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(data, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `moin_aurich_data_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    if (Array.isArray(importedData)) {
+                        data = importedData;
+                        updateAll();
+                        alert('Daten erfolgreich importiert!');
+                    } else {
+                        alert('Ungültiges Datenformat!');
+                    }
+                } catch (error) {
+                    alert('Fehler beim Import: ' + error.message);
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = '';
+        }
+
+        document.getElementById('dateInput').valueAsDate = new Date();
+
+        // Daten laden und dann UI initialisieren
+        loadData();
+        updateAll();
+    </script>
+</body>
+</html>
